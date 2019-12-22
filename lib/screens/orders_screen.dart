@@ -81,10 +81,6 @@ class OrdersScreen extends StatelessWidget {
   }
 }
 
-
-
-
-
 // _isLoading
 //     ?
 //     : orderData.orders.length > 0
