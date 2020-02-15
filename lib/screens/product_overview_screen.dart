@@ -47,6 +47,9 @@ class _ProductOverviewScreenState extends State<ProductOverviewScreen> {
     _isInit = false;
     super.didChangeDependencies();
   }
+  Future<void>_refreshScreen(BuildContext context)async{
+    Provider.of<ProductsProvider>(context).fetchAndSetProducts();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +76,7 @@ class _ProductOverviewScreenState extends State<ProductOverviewScreen> {
                       PopupMenuItem(
                           child: Text('Show All'), value: FilterOptions.All),
                     ]),
+                    
             Consumer<Cart>(
               builder: (_, cart, chhild) => Badge(
                 child: chhild,
@@ -88,8 +92,10 @@ class _ProductOverviewScreenState extends State<ProductOverviewScreen> {
           ],
         ),
         drawer: AppDrawer(),
-        body: _isLoading
+        body: RefreshIndicator(
+        onRefresh:()=> _refreshScreen(context),
+        child: _isLoading
             ? Center(child: CircularProgressIndicator())
-            : ProductGrid(_showOnlyFavorite));
+            : ProductGrid(_showOnlyFavorite)));
   }
 }

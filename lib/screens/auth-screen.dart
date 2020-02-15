@@ -1,6 +1,8 @@
 import 'dart:math';
-
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import '../provider/auth.dart';
+import '../model/http_exception.dart';
 
 enum AuthMode { Signup, Login }
 
@@ -40,9 +42,9 @@ class AuthScreen extends StatelessWidget {
                   Flexible(
                     child: Container(
                       margin: EdgeInsets.only(bottom: 20.0),
-                      padding:
-                          EdgeInsets.symmetric(vertical: 8.0, horizontal: 94.0),
-                      transform: Matrix4.rotationZ(-8 * pi / 180)
+                      padding: EdgeInsets.symmetric(
+                          vertical: 10.0, horizontal: 90.0),
+                      transform: Matrix4.rotationZ(-9 * pi / 180)
                         ..translate(-10.0),
                       // ..translate(-10.0),
                       decoration: BoxDecoration(
@@ -59,11 +61,12 @@ class AuthScreen extends StatelessWidget {
                       child: Text(
                         'MyShop',
                         style: TextStyle(
-                          color: Theme.of(context).accentTextTheme.title.color,
-                          fontSize: 50,
-                          fontFamily: 'Anton',
-                          fontWeight: FontWeight.normal,
-                        ),
+                            color:
+                                Theme.of(context).accentTextTheme.title.color,
+                            fontSize: 40,
+                            fontFamily: 'Anton',
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic),
                       ),
                     ),
                   ),
@@ -97,10 +100,20 @@ class _AuthCardState extends State<AuthCard> {
     'email': '',
     'password': '',
   };
-  var _isLoading = false;
+  bool _isLoading = false;
   final _passwordController = TextEditingController();
 
-  void _submit() {
+  void _showErrorDialog(String message){
+    showDialog(context: context, builder: (ctx)=> AlertDialog(title: Text('An error occured!'),
+    content: Text(message),
+    actions: <Widget>[
+      FlatButton(child: Text('OK'),
+      onPressed: (){Navigator.of(ctx).pop();},)
+    ],
+    ));
+  }
+
+  Future<void> _submit() async{
     if (!_formKey.currentState.validate()) {
       // Invalid!
       return;
@@ -109,11 +122,38 @@ class _AuthCardState extends State<AuthCard> {
     setState(() {
       _isLoading = true;
     });
+    try{
     if (_authMode == AuthMode.Login) {
+       await Provider.of<Auth>(context, listen: false).login(
+        _authData['email'], 
+        _authData['password']);
       // Log user in
     } else {
       // Sign user up
+      await Provider.of<Auth>(context, listen: false).signUp(
+          _authData['email'], 
+          _authData['password'],
+      );
     }
+  } on HttpException catch(error){
+    var errorMessage = 'Authentication Failed';
+    if(error.toString().contains('EMAIL_EXISTS')){
+      errorMessage = 'This Email Address already in use.';
+    }else if(errorMessage.toString().contains('INVALID_Email')){
+      errorMessage = 'This is not a valid email address.';
+    }else if (errorMessage.toString().contains('WEAK_PASSWORD')){
+      errorMessage = 'Try using stronger password';
+    }else if (errorMessage.toString().contains('EMAIL_NOT_FOUND')){
+      errorMessage = 'Could not find an user with this email';
+    }else if(errorMessage.toString().contains('INVALID_PASSWORD')){
+      errorMessage = 'Invalid Password.';
+    }
+    _showErrorDialog(errorMessage);
+  }
+  catch(error){
+   const  errorMessage = 'Could not Authenticate! Please try again later..';
+   _showErrorDialog(errorMessage);
+  }
     setState(() {
       _isLoading = false;
     });
@@ -154,7 +194,10 @@ class _AuthCardState extends State<AuthCard> {
                   decoration: InputDecoration(labelText: 'E-Mail'),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value.isEmpty || !value.contains('@')) {
+                    if (value.isEmpty){
+                      return 'Please do not leave the space blank.';
+                    }
+                    else if ( !value.contains('@')) {
                       return 'Invalid email!';
                     }
                   },
@@ -167,7 +210,11 @@ class _AuthCardState extends State<AuthCard> {
                   obscureText: true,
                   controller: _passwordController,
                   validator: (value) {
-                    if (value.isEmpty || value.length < 5) {
+
+                    if(value.isEmpty){
+                      return 'Please do not leave the space blank.';
+                    }
+                    else if ( value.length < 8) {
                       return 'Password is too short!';
                     }
                   },
@@ -182,7 +229,10 @@ class _AuthCardState extends State<AuthCard> {
                     obscureText: true,
                     validator: _authMode == AuthMode.Signup
                         ? (value) {
-                            if (value != _passwordController.text) {
+                          if(value.isEmpty){
+                      return 'Please do not leave the space blank.';
+                    }
+                            else if (value != _passwordController.text) {
                               return 'Passwords do not match!';
                             }
                           }
